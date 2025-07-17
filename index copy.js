@@ -1,28 +1,18 @@
-import path from "path";
-import { fileURLToPath } from "url";
 import { exec } from "child_process";
-import { dirname } from "path";
 import cors from "cors";
 import dotenv from "dotenv";
 import voice from "elevenlabs-node";
 import express from "express";
 import { promises as fs } from "fs";
 import OpenAI from "openai";
-import { promisify } from "util";
-
 dotenv.config();
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-
-const execPromise = promisify(exec);
-
 const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY || "-",
+  apiKey: process.env.OPENAI_API_KEY || "-", // Your OpenAI API key here, I used "-" to avoid errors when the key is not set but you should not do that
 });
 
 const elevenLabsApiKey = process.env.ELEVEN_LABS_API_KEY;
-const voiceID = "86V9x9hrQds83qf7zaGn";
+const voiceID = "qHkrJuifPpn95wK3rm2A";
 
 const app = express();
 app.use(express.json());
@@ -37,21 +27,28 @@ app.get("/voices", async (req, res) => {
   res.send(await voice.getVoices(elevenLabsApiKey));
 });
 
+const execCommand = (command) => {
+  return new Promise((resolve, reject) => {
+    exec(command, (error, stdout, stderr) => {
+      if (error) reject(error);
+      resolve(stdout);
+    });
+  });
+};
+
 const lipSyncMessage = async (message) => {
   const time = new Date().getTime();
   console.log(`Starting conversion for message ${message}`);
-
-  const mp3Path = path.join(__dirname, 'audios', `message_${message}.mp3`);
-  const wavPath = path.join(__dirname, 'audios', `message_${message}.wav`);
-  const jsonPath = path.join(__dirname, 'audios', `message_${message}.json`);
-  const rhubarbPath = path.join(__dirname, 'bin', 'rhubarb.exe');
-
-  // Conversión MP3 → WAV
-  await execPromise(`ffmpeg -y -i "${mp3Path}" "${wavPath}"`);
+  await execCommand(
+    `ffmpeg -y -i audios/message_${message}.mp3 audios/message_${message}.wav`
+    // -y to overwrite the file
+  );
   console.log(`Conversion done in ${new Date().getTime() - time}ms`);
+  await execCommand(
+  `./bin/rhubarb.exe -f json -o "audios/message_${message}.json" "audios/message_${message}.wav" -r phonetic`
+  );
 
-  // Generar lip sync JSON
-  await execPromise(`"${rhubarbPath}" -f json -o "${jsonPath}" "${wavPath}" -r phonetic`);
+  // -r phonetic is faster but less accurate
   console.log(`Lip sync done in ${new Date().getTime() - time}ms`);
 };
 
@@ -78,7 +75,6 @@ app.post("/chat", async (req, res) => {
     });
     return;
   }
-
   if (!elevenLabsApiKey || openai.apiKey === "-") {
     res.send({
       messages: [
@@ -125,14 +121,17 @@ app.post("/chat", async (req, res) => {
       },
     ],
   });
-
   let messages = JSON.parse(completion.choices[0].message.content);
-  if (messages.messages) messages = messages.messages;
-
+  if (messages.messages) {
+    messages = messages.messages; // ChatGPT is not 100% reliable, sometimes it directly returns an array and sometimes a JSON object with a messages property
+  }
   for (let i = 0; i < messages.length; i++) {
     const message = messages[i];
-    const fileName = `audios/message_${i}.mp3`;
-    await voice.textToSpeech(elevenLabsApiKey, voiceID, fileName, message.text);
+    // generate audio file
+    const fileName = `audios/message_${i}.mp3`; // The name of your audio file
+    const textInput = message.text; // The text you wish to convert to speech
+    await voice.textToSpeech(elevenLabsApiKey, voiceID, fileName, textInput);
+    // generate lipsync
     await lipSyncMessage(i);
     message.audio = await audioFileToBase64(fileName);
     message.lipsync = await readJsonTranscript(`audios/message_${i}.json`);
@@ -152,5 +151,5 @@ const audioFileToBase64 = async (file) => {
 };
 
 app.listen(port, () => {
-  console.log(`virtual Assistant listening on port ${port}`);
+  console.log(`Virtual Assistant listening on port ${port}`);
 });
