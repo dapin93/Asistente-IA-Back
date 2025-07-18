@@ -1,11 +1,12 @@
-The frontend is [here](https://github.com/dapin93/Asistente-IA-Front).
+El frontend está [aquí](https://github.com/dapin93/Asistente-IA-Front).
 
-## Setup
-Create a `.env` file at the root of the repository to add your **OpenAI** and **ElevenLabs API Keys**. Refer to `.env.example` for the environment variable names.
+## Configuración
+Crea un archivo `.env` en la raíz del repositorio para agregar tus claves de API de **OpenAI** y **ElevenLabs API Keys**. Consulta el archivo `.env.example` para ver los nombres de las variables de entorno.
 
-Download the **RhubarbLibrary** binary for your **OS** [here](https://github.com/DanielSWolf/rhubarb-lip-sync/releases) and put it in your `bin` folder. `rhubarb` executable should be accessible through `bin/rhubarb`.
+Descarga el binario de **RhubarbLibrary** para tu **sistema operativo** [aquí](https://github.com/DanielSWolf/rhubarb-lip-sync/releases) y colócalo en tu carpeta `bin`. El ejecutable `rhubarb` debe estar accesible mediante `bin/rhubarb`.
 
-Start the development server with
+Inicia el servidor de desarrollo con:
+
 ```
 yarn
 yarn dev
