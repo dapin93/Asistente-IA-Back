@@ -2,3 +2,5 @@
 node_modules
 bin
 audios/message_*
+data/*.md
+formats/*.pdf
